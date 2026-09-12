@@ -1,0 +1,88 @@
+{
+  "name": "@standard-search-params/react",
+  "version": "0.1.0",
+  "description": "A React hook that reads URL search params and validates them per-key against any Standard Schema-compliant validator (Zod, Valibot, ArkType, ...).",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "react",
+    "hooks",
+    "react-hooks",
+    "standard-schema",
+    "zod",
+    "valibot",
+    "arktype",
+    "search-params",
+    "query-params",
+    "url",
+    "validation"
+  ],
+  "author": {
+    "name": "Lei Wang",
+    "url": "https://github.com/otiswanglei"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otiswanglei/standard-search-params.git"
+  },
+  "homepage": "https://github.com/otiswanglei/standard-search-params#readme",
+  "bugs": {
+    "url": "https://github.com/otiswanglei/standard-search-params/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "^1.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.3.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.15.0",
+    "valibot": "^1.5.0",
+    "vitest": "^5.0.1",
+    "zod": "^4.6.2"
+  },
+  "packageManager": "npm@11.19.0"
+}
