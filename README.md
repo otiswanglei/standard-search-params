@@ -1,10 +1,15 @@
 # @standard-search-params/react
 
-A tiny React hook that reads the current URL's search params and validates
-each one, key by key, against **any validation library that implements
-[Standard Schema](https://standardschema.dev)** — [Zod](https://zod.dev)
+A tiny **client-side** React hook that reads the current URL's search params
+and validates each one, key by key, against **any validation library that
+implements [Standard Schema](https://standardschema.dev)** — [Zod](https://zod.dev)
 (v3.24+ or v4), [Valibot](https://valibot.dev), [ArkType](https://arktype.io),
 and others. One invalid param never throws away the rest.
+
+Built for client-rendered apps (SPAs) and client components — it reads
+`window.location.search` after mount, so it never runs during server
+rendering. See [Behavior & limitations](#behavior--limitations) for what
+that means in an SSR framework.
 
 ## Install
 
