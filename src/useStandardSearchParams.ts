@@ -91,7 +91,6 @@ export const useStandardSearchParams = <T extends SearchParamsSchema>(
     setValidatedSearchParams(validatedParams as Partial<InferSearchParams<T>>);
     setSearchParams(params as Partial<Record<keyof T, string>>);
     setIsSearchParamsReady(true);
-    // Intentionally run once on mount only — see the docstring above.
   }, []);
 
   return useMemo(
