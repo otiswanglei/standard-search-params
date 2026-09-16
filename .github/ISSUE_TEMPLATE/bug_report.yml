@@ -1,0 +1,58 @@
+name: Bug report
+description: Something isn't working as documented.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: The `@standard-search-params/react` version from your package.json.
+      placeholder: "0.1.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: schema-library
+    attributes:
+      label: Validation library
+      description: Which Standard Schema library does your schema use?
+      options:
+        - Zod
+        - Valibot
+        - ArkType
+        - Other / mixed
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >
+        A minimal schema + URL that triggers the bug. A link to a
+        StackBlitz/CodeSandbox reproduction is even more helpful.
+      placeholder: |
+        const schema = { page: z.coerce.number().int() };
+        // URL: ?page=2
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Framework (Next.js, Vite, CRA, ...), browser, anything else relevant.
