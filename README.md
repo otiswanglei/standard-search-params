@@ -79,6 +79,27 @@ const schema = {
 const { validatedSearchParams } = useStandardSearchParams(schema);
 ```
 
+### Skipping validation for a key
+
+`schema` can't be omitted — it's how the hook knows which URL keys to read
+in the first place. But if you want a specific key's raw string passed
+through as-is, without any real validation, give it an always-succeeding
+schema like `z.any()` (or Valibot's `v.any()`):
+
+```tsx
+const schema = {
+  page: z.coerce.number().int(), // validated
+  debug: z.any(), // passed through as-is
+};
+
+const { validatedSearchParams } = useStandardSearchParams(schema);
+// validatedSearchParams.debug is whatever string was in the URL, unchanged
+```
+
+If you want *every* URL param, validated or not, this hook isn't the
+right tool — reach for `URLSearchParams` directly, or your router's own
+`useSearchParams()` (React Router, Next.js).
+
 ## API
 
 ### `useStandardSearchParams(schema)`
