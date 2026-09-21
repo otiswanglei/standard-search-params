@@ -100,12 +100,65 @@ If you want *every* URL param, validated or not, this hook isn't the
 right tool — reach for `URLSearchParams` directly, or your router's own
 `useSearchParams()` (React Router, Next.js).
 
+### Reacting to navigation
+
+By default the hook only ever reads the URL once, on mount. Two ways to
+react to it changing afterwards:
+
+**Browser back/forward** — pass `{ listenToPopstate: true }` to also
+re-read on the native `popstate` event:
+
+```tsx
+const { validatedSearchParams } = useStandardSearchParams(schema, {
+  listenToPopstate: true,
+});
+```
+
+**SPA route pushes** (`router.push()`, `navigate()`, ...) — these don't
+fire `popstate`, so call the returned `refresh()` yourself from an effect
+tied to your router's location state:
+
+```tsx
+// Next.js
+import { usePathname, useSearchParams as useNextSearchParams } from 'next/navigation';
+
+const { validatedSearchParams, refresh } = useStandardSearchParams(schema);
+const pathname = usePathname();
+const nextSearchParams = useNextSearchParams();
+
+useEffect(() => {
+  refresh();
+}, [pathname, nextSearchParams, refresh]);
+```
+
+```tsx
+// React Router
+import { useLocation } from 'react-router-dom';
+
+const { validatedSearchParams, refresh } = useStandardSearchParams(schema);
+const location = useLocation();
+
+useEffect(() => {
+  refresh();
+}, [location, refresh]);
+```
+
+`refresh()` skips re-validation if `location.search` hasn't changed since
+the last read — this is what lets a `popstate` listener and an effect like
+the ones above both call it for the same navigation without validating
+twice. If you need to force re-validation against the *same* URL (e.g.
+after changing a validator's rules at runtime), call
+`refresh({ force: true })`.
+
 ## API
 
-### `useStandardSearchParams(schema)`
+### `useStandardSearchParams(schema, options?)`
 
 - `schema` — a plain object whose values are Standard Schema validators
   (e.g. `z.string()`, `v.number()`). Only these keys are read from the URL.
+- `options.listenToPopstate` — also re-read the URL on browser
+  back/forward. `false` by default. See
+  [Reacting to navigation](#reacting-to-navigation).
 
 Returns:
 
@@ -114,6 +167,7 @@ Returns:
 | `validatedSearchParams` | `Partial<InferSearchParams<typeof schema>>` | Params that passed validation, parsed to each schema's output type. |
 | `searchParams`          | `Partial<Record<keyof schema, string>>`   | Raw string values read from the URL, before validation.              |
 | `isSearchParamsReady`  | `boolean`                                 | `true` once the initial read/parse pass has completed on the client.  |
+| `refresh`               | `(options?: { force?: boolean }) => void` | Re-reads and re-validates the URL. See [Reacting to navigation](#reacting-to-navigation). |
 
 `InferSearchParams<T>` is also exported, for when you need the parsed shape
 outside the hook:
@@ -127,15 +181,17 @@ type Params = InferSearchParams<typeof schema>;
 
 ## Behavior & limitations
 
-- **Reads the URL once, on mount.** It does not subscribe to
-  `popstate`/history changes, and it does not re-run if `schema` changes on
-  a later render — an inline schema literal (a fresh object every render)
-  is fine, since only the keys present on the very first render are ever
-  read. If the *set of keys* genuinely needs to change at runtime (e.g. a
-  permission-dependent schema), memoizing the object won't help — remount
-  the component instead (e.g. with a `key` prop). In development, a
-  console warning flags it if the schema's keys differ from what was
-  there on mount.
+- **Reads the URL once, on mount, by default.** Pass
+  `{ listenToPopstate: true }` to also re-read automatically on browser
+  back/forward, or call the returned `refresh()` yourself — see
+  [Reacting to navigation](#reacting-to-navigation). Either way, it never
+  re-runs just because `schema` changes identity — an inline schema
+  literal (a fresh object every render) is fine, since only the keys
+  present on the very first render are ever read. If the *set of keys*
+  genuinely needs to change at runtime (e.g. a permission-dependent
+  schema), memoizing the object won't help — remount the component
+  instead (e.g. with a `key` prop). In development, a console warning
+  flags it if the schema's keys differ from what was there on mount.
 - **Per-field validation only.** Each key is validated independently, so
   checks that span multiple fields (e.g. a schema-level `.refine()` on a
   composed object) don't apply here — there's no single "object schema" in

@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { z } from 'zod';
 import * as v from 'valibot';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -178,6 +178,125 @@ describe('useStandardSearchParams', () => {
       expect(warnSpy).toHaveBeenCalledTimes(1);
 
       warnSpy.mockRestore();
+    });
+  });
+
+  describe('popstate and refresh()', () => {
+    it('does not react to popstate by default', () => {
+      setUrl('?page=1');
+      const schema = { page: z.coerce.number().int() };
+
+      const { result } = renderHook(() => useStandardSearchParams(schema));
+      expect(result.current.validatedSearchParams).toEqual({ page: 1 });
+
+      act(() => {
+        setUrl('?page=2');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+
+      expect(result.current.validatedSearchParams).toEqual({ page: 1 });
+    });
+
+    it('re-reads the URL on popstate when listenToPopstate is true', () => {
+      setUrl('?page=1');
+      const schema = { page: z.coerce.number().int() };
+
+      const { result } = renderHook(() =>
+        useStandardSearchParams(schema, { listenToPopstate: true }),
+      );
+      expect(result.current.validatedSearchParams).toEqual({ page: 1 });
+
+      act(() => {
+        setUrl('?page=2');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+
+      expect(result.current.validatedSearchParams).toEqual({ page: 2 });
+    });
+
+    it('stops reacting to popstate once listenToPopstate becomes false', () => {
+      setUrl('?page=1');
+      const schema = { page: z.coerce.number().int() };
+
+      const { result, rerender } = renderHook(
+        ({ listen }: { listen: boolean }) =>
+          useStandardSearchParams(schema, { listenToPopstate: listen }),
+        { initialProps: { listen: true } },
+      );
+
+      rerender({ listen: false });
+
+      act(() => {
+        setUrl('?page=2');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+
+      expect(result.current.validatedSearchParams).toEqual({ page: 1 });
+    });
+
+    it('refresh() manually re-reads the URL', () => {
+      setUrl('?page=1');
+      const schema = { page: z.coerce.number().int() };
+
+      const { result } = renderHook(() => useStandardSearchParams(schema));
+      expect(result.current.validatedSearchParams).toEqual({ page: 1 });
+
+      act(() => {
+        setUrl('?page=2');
+        result.current.refresh();
+      });
+
+      expect(result.current.validatedSearchParams).toEqual({ page: 2 });
+    });
+
+    it('refresh() without force is a no-op when the URL is unchanged', () => {
+      setUrl('?page=1');
+      const schema = { page: z.coerce.number().int() };
+
+      const { result } = renderHook(() => useStandardSearchParams(schema));
+      const before = result.current.validatedSearchParams;
+
+      act(() => {
+        result.current.refresh();
+      });
+
+      expect(result.current.validatedSearchParams).toBe(before);
+    });
+
+    it('refresh() without force ignores a schema change alone (URL unchanged)', () => {
+      setUrl('?page=999');
+
+      const { result, rerender } = renderHook(
+        (schema: Record<string, z.ZodTypeAny>) =>
+          useStandardSearchParams(schema),
+        { initialProps: { page: z.coerce.number().int().max(1000) } },
+      );
+      expect(result.current.validatedSearchParams).toEqual({ page: 999 });
+
+      rerender({ page: z.coerce.number().int().max(10) });
+      act(() => {
+        result.current.refresh();
+      });
+
+      expect(result.current.validatedSearchParams).toEqual({ page: 999 });
+    });
+
+    it('refresh({ force: true }) re-validates against the current schema even if the URL is unchanged', () => {
+      setUrl('?page=999');
+
+      const { result, rerender } = renderHook(
+        (schema: Record<string, z.ZodTypeAny>) =>
+          useStandardSearchParams(schema),
+        { initialProps: { page: z.coerce.number().int().max(1000) } },
+      );
+      expect(result.current.validatedSearchParams).toEqual({ page: 999 });
+
+      rerender({ page: z.coerce.number().int().max(10) });
+      act(() => {
+        result.current.refresh({ force: true });
+      });
+
+      expect(result.current.validatedSearchParams).toEqual({});
     });
   });
 });
