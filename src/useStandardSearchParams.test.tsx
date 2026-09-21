@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { z } from 'zod';
 import * as v from 'valibot';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useStandardSearchParams } from './useStandardSearchParams';
 
@@ -140,5 +140,44 @@ describe('useStandardSearchParams', () => {
     rerender();
 
     expect(result.current).toBe(firstResult);
+  });
+
+  describe('dev warning for a changing set of schema keys', () => {
+    it('does not warn when a fresh inline schema has the same keys', () => {
+      setUrl('?page=2');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { rerender } = renderHook(
+        ({ page }) => useStandardSearchParams({ page }),
+        { initialProps: { page: z.coerce.number().int() } },
+      );
+      rerender({ page: z.coerce.number().int() }); // new object, same key
+      rerender({ page: z.coerce.number().int() });
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('warns once when the set of schema keys changes after mount', () => {
+      setUrl('?page=2&q=hello');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { rerender } = renderHook(
+        (schema) => useStandardSearchParams(schema),
+        { initialProps: { page: z.coerce.number().int() } as Record<string, z.ZodTypeAny> },
+      );
+
+      rerender({ page: z.coerce.number().int(), q: z.string() });
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0]?.[0]).toMatch(/schema keys changed after mount/);
+      expect(warnSpy.mock.calls[0]?.[0]).toMatch(/was \[page\], now \[page,q\]/);
+
+      // Re-rendering again with the same (new) keys shouldn't warn again.
+      rerender({ page: z.coerce.number().int(), q: z.string() });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      warnSpy.mockRestore();
+    });
   });
 });

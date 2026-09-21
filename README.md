@@ -128,11 +128,14 @@ type Params = InferSearchParams<typeof schema>;
 ## Behavior & limitations
 
 - **Reads the URL once, on mount.** It does not subscribe to
-  `popstate`/history changes, and it does not re-run if you pass a new
-  `schema` object on a later render. Define your schema outside the
-  component (or `useMemo` it) — an inline schema is fine for the initial
-  read, but changing its identity on a later render won't trigger a
-  re-parse.
+  `popstate`/history changes, and it does not re-run if `schema` changes on
+  a later render — an inline schema literal (a fresh object every render)
+  is fine, since only the keys present on the very first render are ever
+  read. If the *set of keys* genuinely needs to change at runtime (e.g. a
+  permission-dependent schema), memoizing the object won't help — remount
+  the component instead (e.g. with a `key` prop). In development, a
+  console warning flags it if the schema's keys differ from what was
+  there on mount.
 - **Per-field validation only.** Each key is validated independently, so
   checks that span multiple fields (e.g. a schema-level `.refine()` on a
   composed object) don't apply here — there's no single "object schema" in

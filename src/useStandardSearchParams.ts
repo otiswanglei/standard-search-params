@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect';
+
+const isDev =
+  typeof process !== 'undefined' && process.env.NODE_ENV !== 'production';
 
 /**
  * A map from URL search param name to the schema that validates it. Each
@@ -35,9 +38,12 @@ export interface UseStandardSearchParamsResult<T extends SearchParamsSchema> {
  * `searchParams`.
  *
  * The URL is read once, on mount. It does not re-run when `schema` changes
- * identity, so pass a stable object (define it outside the component, or
- * memoize it) — an inline schema is fine for the initial read, but changing
- * its identity on a later render won't trigger a re-parse.
+ * — an inline schema literal (a fresh object every render) is fine, since
+ * only the very first render's keys are ever read. If the *set of keys*
+ * genuinely needs to change at runtime (e.g. a permission-dependent
+ * schema), memoizing the object won't help — remount the component
+ * instead (e.g. with a `key` prop). A console warning flags this in
+ * development if the schema's keys differ from what was there on mount.
  *
  * Only synchronous validators are supported: if a schema's `validate`
  * returns a `Promise`, that param is treated as invalid (with a console
@@ -53,6 +59,21 @@ export const useStandardSearchParams = <T extends SearchParamsSchema>(
     Partial<Record<keyof T, string>>
   >({});
   const [isSearchParamsReady, setIsSearchParamsReady] = useState(false);
+
+  // Dev-only: warn if the set of schema keys changes after mount. This
+  // never affects behavior — the hook still only reads the URL once, on
+  // mount — it just flags a likely footgun (e.g. a permission-dependent
+  // schema) early instead of silently ignoring newly-added keys.
+  const schemaKeys = Object.keys(schema).sort().join(',');
+  const prevSchemaKeysRef = useRef(schemaKeys);
+  useEffect(() => {
+    if (isDev && prevSchemaKeysRef.current !== schemaKeys) {
+      console.warn(
+        `useStandardSearchParams: schema keys changed after mount (was [${prevSchemaKeysRef.current}], now [${schemaKeys}]), but this hook only reads the URL once, on mount, so the new keys won't be read. If the set of keys genuinely needs to change at runtime, remount the component (e.g. with a \`key\` prop) — memoizing the schema object does not cause a re-parse.`,
+      );
+      prevSchemaKeysRef.current = schemaKeys;
+    }
+  }, [schemaKeys]);
 
   useIsomorphicLayoutEffect(() => {
     // Built up as plain, loosely-typed objects and cast once at the state
@@ -71,10 +92,7 @@ export const useStandardSearchParams = <T extends SearchParamsSchema>(
         const result = fieldSchema['~standard'].validate(paramValue);
 
         if (result instanceof Promise) {
-          if (
-            typeof process !== 'undefined' &&
-            process.env.NODE_ENV !== 'production'
-          ) {
+          if (isDev) {
             console.warn(
               `useStandardSearchParams: schema for "${paramKey}" returned an async validation result, which is not supported. This param will be treated as invalid.`,
             );
