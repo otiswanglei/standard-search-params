@@ -1,6 +1,6 @@
 {
   "name": "@standard-search-params/react",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A React hook that reads URL search params and validates them per-key against any Standard Schema-compliant validator (Zod, Valibot, ArkType, ...).",
   "type": "module",
   "main": "./dist/index.cjs",
