@@ -79,6 +79,49 @@ const schema = {
 const { validatedSearchParams } = useStandardSearchParams(schema);
 ```
 
+### Without a validation library (plain regex)
+
+You don't need Zod or Valibot to use this hook. Anything that implements the
+Standard Schema interface works, and for simple format checks a few lines are
+enough:
+
+```ts
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+const pattern = (
+  regex: RegExp,
+  message = 'Invalid format',
+): StandardSchemaV1<string, string> => ({
+  '~standard': {
+    version: 1,
+    vendor: 'inline-regex',
+    validate: (value) =>
+      typeof value === 'string' && regex.test(value)
+        ? { value }
+        : { issues: [{ message }] },
+  },
+});
+
+const schema = {
+  page: pattern(/^\d+$/),
+  sort: pattern(/^(asc|desc)$/),
+};
+
+const { validatedSearchParams } = useStandardSearchParams(schema);
+// validatedSearchParams.page and .sort are typed as `string`
+```
+
+A few things to keep in mind:
+
+- A regex only checks the format. The value stays a string (`page` is `'2'`,
+  not `2`). If you need a number, use a validator that can transform, like
+  `z.coerce.number()`.
+- Don't use the `g` or `y` flag. A global or sticky regex keeps state between
+  `.test()` calls, so the same value can pass and fail alternately.
+- `@standard-schema/spec` is a types-only package. If your package manager
+  doesn't let you import it directly (e.g. pnpm's strict `node_modules`), add
+  it as a dev dependency.
+
 ### Skipping validation for a key
 
 `schema` can't be omitted — it's how the hook knows which URL keys to read
